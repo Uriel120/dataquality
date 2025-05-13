@@ -4,13 +4,14 @@ import psycopg2
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement
-load_dotenv('../.env')  # adapte le chemin si besoin
+env_path = '../.env' if os.path.exists('../.env') else '.env'
+load_dotenv(env_path)
 
 DB_USER = os.getenv('POSTGRES_USER')
 DB_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 DB_NAME = os.getenv('POSTGRES_DB')
 DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
-DB_PORT = os.getenv('POSTGRES_PORT', 5435)
+DB_PORT = os.getenv('POSTGRES_PORT', 5432)
 
 # Connexion à la base de données
 conn = psycopg2.connect(
@@ -37,12 +38,12 @@ CREATE TABLE IF NOT EXISTS distribution_purchases (
 conn.commit()
 
 # Charger le fichier CSV
-df = pd.read_csv('../input_data/distribution_purchases.csv')
+df = pd.read_csv('input_data/distribution_purchases.csv')
 
 # Remplacer les NaN par None pour les valeurs manquantes
 df = df.where(pd.notnull(df), None)
 
-# Insérer les données dans la table
+# Insertion idempotente (upsert)
 for _, row in df.iterrows():
     cur.execute(
         """
@@ -50,7 +51,13 @@ for _, row in df.iterrows():
             transaction_id, customer_id, purchase_amount, purchase_date,
             product_category, product_rating, return_date
         ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (transaction_id) DO NOTHING
+        ON CONFLICT (transaction_id) DO UPDATE SET
+            customer_id = EXCLUDED.customer_id,
+            purchase_amount = EXCLUDED.purchase_amount,
+            purchase_date = EXCLUDED.purchase_date,
+            product_category = EXCLUDED.product_category,
+            product_rating = EXCLUDED.product_rating,
+            return_date = EXCLUDED.return_date
         """,
         (
             row['transaction_id'],
@@ -66,4 +73,4 @@ conn.commit()
 
 cur.close()
 conn.close()
-print("Table créée et données importées !")
+print("Table créée et données importées de façon idempotente !") 
