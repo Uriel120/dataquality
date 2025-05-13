@@ -11,7 +11,7 @@ DB_USER = os.getenv('POSTGRES_USER')
 DB_PASSWORD = os.getenv('POSTGRES_PASSWORD')
 DB_NAME = os.getenv('POSTGRES_DB')
 DB_HOST = os.getenv('POSTGRES_HOST', 'localhost')
-DB_PORT = os.getenv('POSTGRES_PORT', 5432)
+DB_PORT = os.getenv('POSTGRES_PORT', 5435)
 
 # Connexion à la base de données
 conn = psycopg2.connect(
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS distribution_purchases (
 conn.commit()
 
 # Charger le fichier CSV
-df = pd.read_csv('input_data/distribution_purchases.csv')
+df = pd.read_csv('../input_data/distribution_purchases.csv')
 
 # Remplacer les NaN par None pour les valeurs manquantes
 df = df.where(pd.notnull(df), None)
@@ -73,4 +73,4 @@ conn.commit()
 
 cur.close()
 conn.close()
-print("Table créée et données importées de façon idempotente !") 
+print("Table créée et données importées de façon idempotente !")
